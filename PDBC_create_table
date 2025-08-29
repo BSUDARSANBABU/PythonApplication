@@ -1,0 +1,105 @@
+import cx_Oracle
+
+def get_connection():
+    return cx_Oracle.connect("scott", "tiger", "localhost:1521/orcl")
+
+while True:
+    print("\n--- ICURD Menu ---")
+    print("1. Insert")
+    print("2. Create Table")
+    print("3. Update")
+    print("4. Read (Select)")
+    print("5. Delete")
+    print("6. Exit")
+
+    choice = int(input("Enter your choice: "))
+
+    match choice:
+        case 1:  # Insert
+            conn = get_connection()
+            cur = conn.cursor()
+            id = int(input("Enter ID: "))
+            name = input("Enter Name: ")
+            course = input("Enter Course: ")
+
+            # check duplicate
+            cur.execute("SELECT COUNT(*) FROM stu WHERE id=:1 AND name=:2 AND course=:3", (id, name, course))
+            count = cur.fetchone()[0]
+
+            if count == 0:
+                cur.execute("INSERT INTO stu (id, name, course) VALUES (:1, :2, :3)", (id, name, course))
+                conn.commit()
+                print("✅ Record Inserted")
+            else:
+                print("⚠ Duplicate record found! Not inserted.")
+
+            cur.close()
+            conn.close()
+
+        case 2:  # Create Table
+            conn = get_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute("""
+                    CREATE TABLE stu (
+                        id NUMBER,
+                        name VARCHAR2(50),
+                        course VARCHAR2(50),
+                        CONSTRAINT stu_unique UNIQUE (id, name, course)
+                    )
+                """)
+                print("✅ Table Created")
+            except Exception as e:
+                print("⚠ Error:", e)
+            finally:
+                cur.close()
+                conn.close()
+
+        case 3:  # Update
+            conn = get_connection()
+            cur = conn.cursor()
+            id = int(input("Enter ID to update: "))
+            old_course = input("Enter old course: ")
+            new_course = input("Enter new course: ")
+            cur.execute("UPDATE stu SET course=:1 WHERE id=:2 AND course=:3",
+                        (new_course, id, old_course))
+            conn.commit()
+            if cur.rowcount > 0:
+                print("✅ Record Updated")
+            else:
+                print("⚠ No record found")
+            cur.close()
+            conn.close()
+
+        case 4:  # Read (Select)
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM stu ORDER BY id")
+            rows = cur.fetchall()
+            print("\nID   NAME      COURSE")
+            print("---------------------------")
+            for r in rows:
+                print(r[0], r[1], r[2])
+            cur.close()
+            conn.close()
+
+        case 5:  # Delete
+            conn = get_connection()
+            cur = conn.cursor()
+            id = int(input("Enter ID to delete: "))
+            course = input("Enter course to delete: ")
+            cur.execute("DELETE FROM stu WHERE id=:1 AND course=:2", (id, course))
+            conn.commit()
+            if cur.rowcount > 0:
+                print("✅ Record Deleted")
+            else:
+                print("⚠ No record found")
+            cur.close()
+            conn.close()
+
+        case 6:  # Exit
+            print("Exiting program...")
+            break
+
+        case _:  # Default
+            print("⚠ Invalid choice. Try again.")
